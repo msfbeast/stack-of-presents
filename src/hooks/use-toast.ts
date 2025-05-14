@@ -1,4 +1,3 @@
-
 import * as React from "react"
 
 import type {
@@ -31,12 +30,12 @@ function generateId() {
 }
 
 // Toast context
-type Toast = Omit<ToasterToast, "id">
+type ToastType = Omit<ToasterToast, "id">
 
 type Action =
   | {
       type: typeof actionTypes.ADD_TOAST
-      toast: Toast
+      toast: ToastType
     }
   | {
       type: typeof actionTypes.UPDATE_TOAST
@@ -156,12 +155,10 @@ function dispatch(action: Action) {
   })
 }
 
-type Toast = Omit<ToasterToast, "id">
-
-function toast({ ...props }: Toast) {
+function toast({ ...props }: ToastType) {
   const id = generateId()
 
-  const update = (props: ToasterToast) =>
+  const update = (props: Partial<ToasterToast>) =>
     dispatch({
       type: actionTypes.UPDATE_TOAST,
       toast: { ...props, id },
