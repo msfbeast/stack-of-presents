@@ -12,6 +12,11 @@ export interface Subscription {
   billingCycle: BillingCycle;
   renewalDate: Date;
   isActive: boolean;
+  isFreeTrial?: boolean;
+  trialEndDate?: Date;
+  receiptUrl?: string;
+  usageFrequency?: 'Daily' | 'Weekly' | 'Monthly' | 'Rarely';
+  notes?: string;
 }
 
 export interface User {
@@ -19,11 +24,21 @@ export interface User {
   preferredCurrency: string;
   darkMode: boolean;
   reminderDays: number;
+  notificationsEnabled: boolean;
+  emailNotifications: boolean;
+}
+
+export interface SpendingHistory {
+  month: string;
+  year: number;
+  totalSpend: number;
+  categories: Record<Category, number>;
 }
 
 interface SubscriptionContextType {
   subscriptions: Subscription[];
   user: User;
+  spendingHistory: SpendingHistory[];
   addSubscription: (subscription: Omit<Subscription, 'id'>) => void;
   updateSubscription: (id: string, subscription: Partial<Subscription>) => void;
   deleteSubscription: (id: string) => void;
@@ -31,6 +46,10 @@ interface SubscriptionContextType {
   calculateTotalMonthlySpend: () => number;
   getUpcomingRenewals: () => Subscription[];
   getSubscriptionsByCategory: () => Record<Category, Subscription[]>;
+  getTrialSubscriptions: () => Subscription[];
+  addReceiptToSubscription: (id: string, receiptUrl: string) => void;
+  recordMonthlySpending: () => void;
+  getMonthlySpendingTrend: () => { month: string; amount: number }[];
 }
 
 const DEFAULT_USER: User = {
@@ -38,6 +57,8 @@ const DEFAULT_USER: User = {
   preferredCurrency: 'USD',
   darkMode: false,
   reminderDays: 3,
+  notificationsEnabled: true,
+  emailNotifications: false,
 };
 
 const MOCK_SUBSCRIPTIONS: Subscription[] = [
@@ -115,22 +136,96 @@ const MOCK_SUBSCRIPTIONS: Subscription[] = [
   },
 ];
 
+// Some mock data for spending history
+const MOCK_SPENDING_HISTORY: SpendingHistory[] = [
+  {
+    month: 'January',
+    year: 2025,
+    totalSpend: 150.99,
+    categories: {
+      'Entertainment': 30.99,
+      'Music': 20.99,
+      'Food': 40.50,
+      'Productivity': 20.99,
+      'Shopping': 20.99,
+      'Health & Fitness': 16.53,
+    }
+  },
+  {
+    month: 'February',
+    year: 2025,
+    totalSpend: 168.45,
+    categories: {
+      'Entertainment': 39.99,
+      'Music': 20.99,
+      'Food': 40.50,
+      'Productivity': 29.99,
+      'Shopping': 20.99,
+      'Health & Fitness': 15.99,
+    }
+  },
+  {
+    month: 'March',
+    year: 2025,
+    totalSpend: 175.67,
+    categories: {
+      'Entertainment': 39.99,
+      'Music': 24.99,
+      'Food': 40.50,
+      'Productivity': 29.99,
+      'Shopping': 24.99,
+      'Health & Fitness': 15.21,
+    }
+  },
+  {
+    month: 'April',
+    year: 2025,
+    totalSpend: 192.50,
+    categories: {
+      'Entertainment': 49.99,
+      'Music': 24.99,
+      'Food': 42.50,
+      'Productivity': 29.99,
+      'Shopping': 29.99,
+      'Health & Fitness': 15.04,
+    }
+  },
+  {
+    month: 'May',
+    year: 2025,
+    totalSpend: 195.38,
+    categories: {
+      'Entertainment': 49.99,
+      'Music': 24.99,
+      'Food': 42.50,
+      'Productivity': 29.99,
+      'Shopping': 33.12,
+      'Health & Fitness': 14.79,
+    }
+  },
+];
+
 const SubscriptionContext = createContext<SubscriptionContextType | undefined>(undefined);
 
 export const SubscriptionProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [subscriptions, setSubscriptions] = useState<Subscription[]>(MOCK_SUBSCRIPTIONS);
   const [user, setUser] = useState<User>(DEFAULT_USER);
+  const [spendingHistory, setSpendingHistory] = useState<SpendingHistory[]>(MOCK_SPENDING_HISTORY);
 
   // Load data from localStorage on mount
   useEffect(() => {
     const storedSubscriptions = localStorage.getItem('subscriptions');
     const storedUser = localStorage.getItem('user');
+    const storedSpendingHistory = localStorage.getItem('spendingHistory');
 
     if (storedSubscriptions) {
       const parsedSubscriptions = JSON.parse(storedSubscriptions);
       // Convert string dates back to Date objects
       parsedSubscriptions.forEach((sub: any) => {
         sub.renewalDate = new Date(sub.renewalDate);
+        if (sub.trialEndDate) {
+          sub.trialEndDate = new Date(sub.trialEndDate);
+        }
       });
       setSubscriptions(parsedSubscriptions);
     }
@@ -138,13 +233,18 @@ export const SubscriptionProvider: React.FC<{ children: React.ReactNode }> = ({ 
     if (storedUser) {
       setUser(JSON.parse(storedUser));
     }
+
+    if (storedSpendingHistory) {
+      setSpendingHistory(JSON.parse(storedSpendingHistory));
+    }
   }, []);
 
   // Save data to localStorage whenever it changes
   useEffect(() => {
     localStorage.setItem('subscriptions', JSON.stringify(subscriptions));
     localStorage.setItem('user', JSON.stringify(user));
-  }, [subscriptions, user]);
+    localStorage.setItem('spendingHistory', JSON.stringify(spendingHistory));
+  }, [subscriptions, user, spendingHistory]);
 
   const addSubscription = (subscription: Omit<Subscription, 'id'>) => {
     const newSubscription = {
@@ -213,12 +313,105 @@ export const SubscriptionProvider: React.FC<{ children: React.ReactNode }> = ({ 
 
     return categories;
   };
+  
+  // New methods for enhanced features
+  const getTrialSubscriptions = () => {
+    const today = new Date();
+    
+    return subscriptions
+      .filter(subscription => subscription.isActive && subscription.isFreeTrial)
+      .filter(subscription => {
+        if (!subscription.trialEndDate) return false;
+        return subscription.trialEndDate >= today;
+      })
+      .sort((a, b) => {
+        if (!a.trialEndDate || !b.trialEndDate) return 0;
+        return a.trialEndDate.getTime() - b.trialEndDate.getTime();
+      });
+  };
+  
+  const addReceiptToSubscription = (id: string, receiptUrl: string) => {
+    updateSubscription(id, { receiptUrl });
+  };
+  
+  const recordMonthlySpending = () => {
+    const now = new Date();
+    const monthNames = ["January", "February", "March", "April", "May", "June",
+                        "July", "August", "September", "October", "November", "December"];
+    const currentMonth = monthNames[now.getMonth()];
+    const currentYear = now.getFullYear();
+    
+    // Calculate spending by category
+    const categories: Record<Category, number> = {
+      Entertainment: 0,
+      Music: 0,
+      Food: 0,
+      Productivity: 0,
+      Shopping: 0,
+      'Health & Fitness': 0,
+    };
+    
+    subscriptions
+      .filter(subscription => subscription.isActive)
+      .forEach(subscription => {
+        const monthlyAmount = subscription.billingCycle === 'Yearly' 
+          ? subscription.amount / 12 
+          : subscription.amount;
+        categories[subscription.category] += monthlyAmount;
+      });
+    
+    const totalSpend = calculateTotalMonthlySpend();
+    
+    // Check if we already have an entry for this month
+    const existingIndex = spendingHistory.findIndex(
+      item => item.month === currentMonth && item.year === currentYear
+    );
+    
+    if (existingIndex >= 0) {
+      // Update existing record
+      const updatedHistory = [...spendingHistory];
+      updatedHistory[existingIndex] = {
+        month: currentMonth,
+        year: currentYear,
+        totalSpend,
+        categories
+      };
+      setSpendingHistory(updatedHistory);
+    } else {
+      // Add new record
+      setSpendingHistory([
+        ...spendingHistory, 
+        {
+          month: currentMonth,
+          year: currentYear,
+          totalSpend,
+          categories
+        }
+      ]);
+    }
+  };
+  
+  const getMonthlySpendingTrend = () => {
+    return spendingHistory
+      .sort((a, b) => {
+        // Sort by year and then by month index
+        const monthsOrder = ["January", "February", "March", "April", "May", "June",
+                             "July", "August", "September", "October", "November", "December"];
+        if (a.year !== b.year) return a.year - b.year;
+        return monthsOrder.indexOf(a.month) - monthsOrder.indexOf(b.month);
+      })
+      .map(item => ({
+        month: `${item.month.substring(0, 3)} ${item.year}`,
+        amount: item.totalSpend
+      }));
+  };
 
   return (
     <SubscriptionContext.Provider
       value={{
         subscriptions,
         user,
+        spendingHistory,
         addSubscription,
         updateSubscription,
         deleteSubscription,
@@ -226,6 +419,10 @@ export const SubscriptionProvider: React.FC<{ children: React.ReactNode }> = ({ 
         calculateTotalMonthlySpend,
         getUpcomingRenewals,
         getSubscriptionsByCategory,
+        getTrialSubscriptions,
+        addReceiptToSubscription,
+        recordMonthlySpending,
+        getMonthlySpendingTrend,
       }}
     >
       {children}

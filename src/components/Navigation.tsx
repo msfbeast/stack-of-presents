@@ -1,8 +1,8 @@
 
 import React from 'react';
+import { Button } from '@/components/ui/button';
 import { Link, useLocation } from 'react-router-dom';
-import { Home, PlusCircle, Settings } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { Home, Plus, Settings, PieChart, Clock, FileText } from 'lucide-react';
 
 const Navigation: React.FC = () => {
   const location = useLocation();
@@ -12,38 +12,47 @@ const Navigation: React.FC = () => {
   };
   
   return (
-    <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 shadow-soft flex justify-around py-3 px-6 z-10">
-      <Link 
-        to="/" 
-        className={cn(
-          "flex flex-col items-center text-xs",
-          isActive('/') ? "text-primary font-medium" : "text-gray-500"
-        )}
-      >
-        <Home size={20} className="mb-1" />
-        <span>Home</span>
+    <div className="fixed bottom-0 left-0 right-0 bg-white border-t flex justify-between p-3 px-6">
+      <Link to="/">
+        <Button variant={isActive('/') ? "default" : "ghost"} size="sm" className="flex flex-col h-14 w-14 rounded-xl">
+          <Home size={20} />
+          <span className="text-[10px] mt-1">Home</span>
+        </Button>
       </Link>
       
-      <Link 
-        to="/add-subscription" 
-        className={cn(
-          "flex flex-col items-center text-xs",
-          isActive('/add-subscription') ? "text-primary font-medium" : "text-gray-500"
-        )}
-      >
-        <PlusCircle size={20} className="mb-1" />
-        <span>Add</span>
+      <Link to="/analytics">
+        <Button variant={isActive('/analytics') ? "default" : "ghost"} size="sm" className="flex flex-col h-14 w-14 rounded-xl">
+          <PieChart size={20} />
+          <span className="text-[10px] mt-1">Analytics</span>
+        </Button>
       </Link>
       
-      <Link 
-        to="/settings" 
-        className={cn(
-          "flex flex-col items-center text-xs",
-          isActive('/settings') ? "text-primary font-medium" : "text-gray-500"
-        )}
-      >
-        <Settings size={20} className="mb-1" />
-        <span>Settings</span>
+      <Link to="/add-subscription">
+        <Button variant="default" size="sm" className="flex flex-col h-14 w-14 rounded-xl">
+          <Plus size={20} />
+          <span className="text-[10px] mt-1">Add</span>
+        </Button>
+      </Link>
+      
+      <Link to="/trials">
+        <Button variant={isActive('/trials') ? "default" : "ghost"} size="sm" className="flex flex-col h-14 w-14 rounded-xl">
+          <Clock size={20} />
+          <span className="text-[10px] mt-1">Trials</span>
+        </Button>
+      </Link>
+      
+      <Link to="/receipts">
+        <Button variant={isActive('/receipts') ? "default" : "ghost"} size="sm" className="flex flex-col h-14 w-14 rounded-xl">
+          <FileText size={20} />
+          <span className="text-[10px] mt-1">Receipts</span>
+        </Button>
+      </Link>
+      
+      <Link to="/settings">
+        <Button variant={isActive('/settings') ? "default" : "ghost"} size="sm" className="flex flex-col h-14 w-14 rounded-xl">
+          <Settings size={20} />
+          <span className="text-[10px] mt-1">Settings</span>
+        </Button>
       </Link>
     </div>
   );

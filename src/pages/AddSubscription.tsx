@@ -23,6 +23,7 @@ import { useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import Navigation from '@/components/Navigation';
 import { useToast } from '@/hooks/use-toast';
+import { Switch } from '@/components/ui/switch';
 
 const AddSubscription: React.FC = () => {
   const [name, setName] = useState('');
@@ -30,6 +31,10 @@ const AddSubscription: React.FC = () => {
   const [amount, setAmount] = useState('');
   const [billingCycle, setBillingCycle] = useState<BillingCycle | ''>('');
   const [renewalDate, setRenewalDate] = useState<Date | undefined>(new Date());
+  const [isFreeTrial, setIsFreeTrial] = useState(false);
+  const [trialEndDate, setTrialEndDate] = useState<Date | undefined>(undefined);
+  const [notes, setNotes] = useState('');
+  const [usageFrequency, setUsageFrequency] = useState<'Daily' | 'Weekly' | 'Monthly' | 'Rarely' | ''>('');
   
   const { addSubscription } = useSubscription();
   const navigate = useNavigate();
@@ -47,6 +52,15 @@ const AddSubscription: React.FC = () => {
       return;
     }
     
+    if (isFreeTrial && !trialEndDate) {
+      toast({
+        title: "Missing Trial End Date",
+        description: "Please select when your free trial ends.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
     addSubscription({
       name,
       category: category as Category,
@@ -54,6 +68,10 @@ const AddSubscription: React.FC = () => {
       billingCycle: billingCycle as BillingCycle,
       renewalDate: renewalDate,
       isActive: true,
+      isFreeTrial,
+      trialEndDate,
+      notes,
+      usageFrequency: usageFrequency as any,
     });
     
     toast({
@@ -156,6 +174,79 @@ const AddSubscription: React.FC = () => {
               />
             </PopoverContent>
           </Popover>
+        </div>
+        
+        {/* Free Trial Toggle */}
+        <div className="pt-2 border-t">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <Label htmlFor="free-trial-toggle" className="font-medium">This is a free trial</Label>
+              <p className="text-sm text-gray-500">Track your free trial period and get reminders before it ends</p>
+            </div>
+            <Switch 
+              id="free-trial-toggle"
+              checked={isFreeTrial}
+              onCheckedChange={setIsFreeTrial}
+            />
+          </div>
+          
+          {isFreeTrial && (
+            <div className="space-y-2">
+              <Label htmlFor="trial-end-date">Trial end date</Label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    id="trial-end-date"
+                    className={cn(
+                      "w-full justify-start text-left font-normal rounded-xl h-12",
+                      !trialEndDate && "text-muted-foreground"
+                    )}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {trialEndDate ? format(trialEndDate, "PPP") : <span>Pick a date</span>}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={trialEndDate}
+                    onSelect={setTrialEndDate}
+                    initialFocus
+                    className="p-3 pointer-events-auto"
+                  />
+                </PopoverContent>
+              </Popover>
+            </div>
+          )}
+        </div>
+        
+        {/* Additional Fields */}
+        <div className="space-y-2">
+          <Label htmlFor="usage-frequency">How often do you use this service?</Label>
+          <Select value={usageFrequency} onValueChange={(value: any) => setUsageFrequency(value)}>
+            <SelectTrigger id="usage-frequency" className="rounded-xl h-12">
+              <SelectValue placeholder="Select usage frequency" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="Daily">Daily</SelectItem>
+              <SelectItem value="Weekly">Weekly</SelectItem>
+              <SelectItem value="Monthly">Monthly</SelectItem>
+              <SelectItem value="Rarely">Rarely</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        
+        <div className="space-y-2">
+          <Label htmlFor="notes">Notes (optional)</Label>
+          <Input
+            id="notes"
+            type="text"
+            placeholder="Any additional notes about this subscription"
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
+            className="rounded-xl h-12"
+          />
         </div>
         
         <Button type="submit" className="w-full rounded-xl h-12 mt-6">

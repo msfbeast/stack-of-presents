@@ -12,6 +12,9 @@ import Dashboard from "./pages/Dashboard";
 import AddSubscription from "./pages/AddSubscription";
 import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
+import Analytics from "./pages/Analytics";
+import Trials from "./pages/Trials";
+import Receipts from "./pages/Receipts";
 import { useEffect, useState } from "react";
 
 const queryClient = new QueryClient();
@@ -48,6 +51,9 @@ const AppRoutes = () => {
       <Route path="/" element={<RequireAuth><Dashboard /></RequireAuth>} />
       <Route path="/add-subscription" element={<RequireAuth><AddSubscription /></RequireAuth>} />
       <Route path="/settings" element={<RequireAuth><Settings /></RequireAuth>} />
+      <Route path="/analytics" element={<RequireAuth><Analytics /></RequireAuth>} />
+      <Route path="/trials" element={<RequireAuth><Trials /></RequireAuth>} />
+      <Route path="/receipts" element={<RequireAuth><Receipts /></RequireAuth>} />
       <Route path="*" element={<NotFound />} />
     </Routes>
   );
