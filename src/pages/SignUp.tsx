@@ -4,7 +4,6 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useNavigate } from 'react-router-dom';
 import { useSubscription } from '@/context/SubscriptionContext';
-import { toast } from '@/hooks/use-toast';
 
 const SignUp: React.FC = () => {
   const [email, setEmail] = useState('');
@@ -15,26 +14,12 @@ const SignUp: React.FC = () => {
     e.preventDefault();
     if (email) {
       updateUser({ email });
-      toast({
-        title: "Sign up successful",
-        description: "Welcome to OneStack!"
-      });
       navigate('/');
-    } else {
-      toast({
-        title: "Error",
-        description: "Please enter a valid email",
-        variant: "destructive"
-      });
     }
   };
   
   const handleGoogleSignIn = () => {
     updateUser({ email: 'user@example.com' });
-    toast({
-      title: "Sign in successful",
-      description: "Welcome back to OneStack!"
-    });
     navigate('/');
   };
 

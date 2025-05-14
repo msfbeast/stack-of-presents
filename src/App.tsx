@@ -45,11 +45,9 @@ const RequireAuth = ({ children }: { children: React.ReactNode }) => {
 };
 
 const AppRoutes = () => {
-  const { user } = useSubscription();
-  
   return (
     <Routes>
-      <Route path="/signup" element={user.email ? <Navigate to="/" replace /> : <SignUp />} />
+      <Route path="/signup" element={<SignUp />} />
       <Route path="/" element={<RequireAuth><Dashboard /></RequireAuth>} />
       <Route path="/add-subscription" element={<RequireAuth><AddSubscription /></RequireAuth>} />
       <Route path="/settings" element={<RequireAuth><Settings /></RequireAuth>} />
